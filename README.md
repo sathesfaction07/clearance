@@ -12,7 +12,7 @@ CI). This README states only what is built and measured.
 
 ## The problem
 
-The customer's first assistant indexed everything and answered everyone. In testing it
+A composite scenario, not a named company. The customer's first assistant indexed everything and answered everyone. In testing it
 quoted a pending legal settlement to a support engineer. The fix that had been proposed,
 removing restricted results after search, looked safe in a demo.
 
