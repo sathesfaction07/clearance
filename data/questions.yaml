@@ -1,0 +1,78 @@
+# Labelled questions over the six handbook sections. Each question is written in a team
+# member's words (deliberately not copying page headings), and `source` is the page that
+# answers it. Retrieval is scored on whether that page appears in the top results.
+# `asker` is someone allowed to read the source; leak tests also ask every question as
+# everyone else.
+questions:
+  # people-policies (all-staff)
+  - q: In Ireland, am I expected to answer work messages after hours?
+    source: people-policies/ireland-ltd/right-to-disconnect-policy.md
+  - q: Which company-wide leave policies exist, for example when I become a parent or serve in the military?
+    source: people-policies/leave-of-absence/_index.md
+  - q: Who are the complaints officers for harassment cases in our India entity?
+    source: people-policies/india-ltd/india-eop-policy.md
+  - q: What does the French entity's charter say about working from home?
+    source: people-policies/france-sas/remote-work-charter.md
+  # total-rewards (all-staff)
+  - q: Is there free coaching to help me with budgeting and money questions?
+    source: total-rewards/benefits/general-and-entity-benefits/financial-wellness.md
+  - q: When does the yearly salary review happen and who is eligible for it?
+    source: total-rewards/compensation/compensation-review-cycle/_index.md
+  - q: What makes up my pay package besides base salary, like bonus and stock?
+    source: total-rewards/compensation/_index.md
+  - q: What is the annual welfare payment and TFR for Italian executives employed through Papaya?
+    source: total-rewards/benefits/general-and-entity-benefits/papaya-global-benefits.md
+  - q: Do team members in South Korea get a yearly health checkup and national pension?
+    source: total-rewards/benefits/general-and-entity-benefits/korea-ltd-benefits.md
+  - q: What medical insurance and annual health screening do Singapore employees get?
+    source: total-rewards/benefits/general-and-entity-benefits/singapore-pte-ltd.md
+  # finance (finance)
+  - q: What are the benefits for mentees and mentors in the finance mentorship scheme?
+    source: finance/growth-and-development/finbt-mentorship.md
+  - q: How are versions named in the planning tool Adaptive, and what user roles exist?
+    source: finance/financial-planning-and-analysis/adaptive-insights.md
+  - q: What payment terms and audit rights do our standard supplier terms include?
+    source: finance/procurement/vendor-guidelines/vendor-agreement.md
+  - q: What should I do when the JiHu validation pipeline fails?
+    source: finance/jihu-support/jihu-validation-pipelines.md
+  - q: Who sits on the disclosure committee and what does its charter cover?
+    source: finance/committee-composition.md
+  # legal (legal)
+  - q: How long do we keep personnel files for team members?
+    source: legal/record-retention-policy.md
+  - q: What restrictions apply to customers using the AI features under the AI functionality terms?
+    source: legal/ai-functionality-terms-v2.md
+  - q: What does the testing agreement say about feedback and confidentiality for testing features?
+    source: legal/testing-agreement-v5.md
+  - q: What product usage data do we collect, such as Service Ping and Snowplow?
+    source: legal/privacy/customer-product-usage-information.md
+  - q: When do I need to involve Legal in a purchase, and how does the NDA process work?
+    source: legal/procurement-guide-collaborating-with-gitlab-legal.md
+  # security (security)
+  - q: How should I vet a new open source library before adding it as a dependency?
+    source: security/best-practices/supply-chain-security-for-dependencies.md
+  - q: How can self-managed customers prevent spam and abuse on their own instance?
+    source: security/security-operations/trustandsafety/diy.md
+  - q: How do I fix a vulnerability reported by secret detection or SAST?
+    source: security/product-security/vulnerability-management/runbooks/fixing-vulnerabilities.md
+  - q: Which Linux distribution is approved for laptops and what EDR is required?
+    source: security/corporate/systems/linux/_index.md
+  - q: How is membership of the automated Google Groups decided and how often does it update?
+    source: security/corporate/systems/google/groups/automated-groups/_index.md
+  - q: How does the field security team's knowledge base help answer customer questionnaires?
+    source: security/security-assurance/field-security/knowledge_base.md
+  # support (support)
+  - q: How do I handle a request to merge two subscriptions or split one?
+    source: support/license-and-renewals/workflows/merge_or_split_subscription.md
+  - q: How should license activation failures be categorised in the Zendesk form fields?
+    source: support/license-and-renewals/workflows/self-managed/troubleshoot_license_upload_issues.md
+  - q: A customer reports slow database queries; what is the investigation workflow?
+    source: support/workflows/investigate_db_perf_issues.md
+  - q: How does the support program for people who want to become managers work?
+    source: support/aspiring_leaders.md
+  - q: What is the process for changing Zendesk macros and triggers?
+    source: support/workflows/working-on-zendesk-content.md
+  - q: How are quarterly CMOC practice events organised?
+    source: support/workflows/cmoc_practice_events.md
+  - q: How do Select partners contact support and upload files?
+    source: support/partnerships/select.md

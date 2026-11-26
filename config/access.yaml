@@ -1,0 +1,16 @@
+# Who may read what. The GitLab handbook is public; these groups are invented for testing
+# permission enforcement on real enterprise text. Each handbook section belongs to one group.
+sections:
+  people-policies: all-staff
+  total-rewards: all-staff
+  support: support
+  security: security
+  legal: legal
+  finance: finance
+users:
+  sam: [all-staff]
+  priya: [all-staff, support]
+  lena: [all-staff, security]
+  tom: [all-staff, legal]
+  omar: [all-staff, finance]
+  auditor: [all-staff, support, security, legal, finance]

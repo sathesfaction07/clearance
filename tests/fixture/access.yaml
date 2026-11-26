@@ -1,0 +1,8 @@
+sections:
+  hr: all-staff
+  legal: legal
+  security: security
+users:
+  sam: [all-staff]
+  tom: [all-staff, legal]
+  lena: [all-staff, security]
