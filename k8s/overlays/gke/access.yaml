@@ -1,0 +1,17 @@
+# On GKE the user is the email IAP verified, so users are keyed by email. The same sections
+# and groups as the tested access file (a test checks that); replaced at deploy time by the
+# file synced from the identity provider.
+sections:
+  people-policies: all-staff
+  total-rewards: all-staff
+  support: support
+  security: security
+  legal: legal
+  finance: finance
+users:
+  sam@example.com: [all-staff]
+  priya@example.com: [all-staff, support]
+  lena@example.com: [all-staff, security]
+  tom@example.com: [all-staff, legal]
+  omar@example.com: [all-staff, finance]
+  auditor@example.com: [all-staff, support, security, legal, finance]

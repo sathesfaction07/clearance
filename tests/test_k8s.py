@@ -45,3 +45,31 @@ def test_pods_are_hardened_and_cannot_drop_requests_on_rollout():
 def test_the_image_does_not_log_query_strings():
     dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
     assert "--no-access-log" in dockerfile
+
+
+def _gke_patch(kind: str) -> list[dict]:
+    kustomization = _load(K8S / "overlays" / "gke" / "kustomization.yaml")
+    (patch,) = [p for p in kustomization["patches"] if p["target"]["kind"] == kind]
+    return yaml.safe_load(patch["patch"])
+
+
+def test_gke_verifies_iap_tokens_and_has_the_same_access_rules():
+    env = {op["value"]["name"]: op["value"]["value"] for op in _gke_patch("Deployment")[1:]}
+    assert env["CLEARANCE_IDENTITY"] == "iap"
+    assert env["CLEARANCE_IAP_AUDIENCE"].startswith("/projects/")
+    tested = _load(ROOT / "config" / "access.yaml")
+    gke = _load(K8S / "overlays" / "gke" / "access.yaml")
+    assert gke["sections"] == tested["sections"]
+    assert {f"{u}@example.com": g for u, g in tested["users"].items()} == gke["users"]
+
+
+def test_gke_admits_only_google_front_ends_and_reaches_only_dns_and_https():
+    ops = {op["path"]: op["value"] for op in _gke_patch("NetworkPolicy")}
+    (ingress,) = ops["/spec/ingress"]
+    assert {b["ipBlock"]["cidr"] for b in ingress["from"]} == {"35.191.0.0/16", "130.211.0.0/22"}
+    ports = sorted(p["port"] for rule in ops["/spec/egress"] for p in rule["ports"])
+    assert ports == [53, 53, 443]
+    iap = list(yaml.safe_load_all((K8S / "overlays" / "gke" / "iap.yaml").read_text("utf-8")))
+    (backend,) = [d for d in iap if d["kind"] == "BackendConfig"]
+    assert backend["spec"]["iap"]["enabled"] is True
+    assert backend["spec"]["healthCheck"]["requestPath"] == "/readyz"

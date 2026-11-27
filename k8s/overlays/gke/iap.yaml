@@ -1,0 +1,43 @@
+# Identity-Aware Proxy in front of the service. Google's load balancer terminates TLS, IAP
+# signs in the user with their Google identity and signs every request it lets through; the
+# service verifies that signature (CLEARANCE_IDENTITY=iap) and trusts nothing else.
+#
+# IAP needs no OAuth client here: without one, GKE uses a Google-managed client. Grant
+# "IAP-secured Web App User" to the people who may use the assistant; what each of them may
+# read is still decided by the access file, not by IAP.
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: clearance
+spec:
+  iap:
+    enabled: true
+  healthCheck:
+    type: HTTP
+    requestPath: /readyz
+    port: 8080
+  timeoutSec: 30
+---
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: clearance
+spec:
+  domains:
+    - handbook.example.com  # replace at deploy time
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: clearance
+  annotations:
+    kubernetes.io/ingress.class: gce
+    kubernetes.io/ingress.global-static-ip-name: clearance  # reserve it first
+    networking.gke.io/managed-certificates: clearance
+    kubernetes.io/ingress.allow-http: "false"
+spec:
+  defaultBackend:
+    service:
+      name: clearance
+      port:
+        number: 8080

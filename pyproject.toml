@@ -4,11 +4,11 @@ build-backend = "hatchling.build"
 
 [project]
 name = "clearance"
-version = "0.2.0"
+version = "0.3.0"
 description = "An enterprise handbook assistant that only retrieves what the asker may read: permission filtering inside retrieval, measured chunking, leak tests, on Kubernetes."
 requires-python = ">=3.11"
 license = "MIT"
-dependencies = ["pyyaml>=6", "starlette>=0.40", "uvicorn>=0.30"]
+dependencies = ["pyjwt[crypto]>=2.8", "pyyaml>=6", "starlette>=0.40", "uvicorn>=0.30"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "pytest-cov>=5.0", "ruff>=0.4", "httpx2>=2.0"]

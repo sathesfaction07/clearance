@@ -1,10 +1,10 @@
 """The retrieval service: search the handbook as the authenticated user, and nothing more.
 
-Identity comes from one header set by the gateway in front of the service (Identity-Aware
-Proxy on GKE, or an in-cluster proxy). The caller never says which groups it belongs to:
-groups are looked up here, from the access file, so a forged group list is impossible and an
-unknown user reads nothing. A network policy lets only gateway pods reach the service, so
-nothing else in the cluster can set the header.
+Identity comes from the gateway in front of the service: a header set by an in-cluster
+proxy, which a network policy makes trustworthy, or on GKE the token Identity-Aware Proxy
+signs, which the service verifies (see `identity.py`). The caller never says which groups it
+belongs to: groups are looked up here, from the access file, so a forged group list is
+impossible and an unknown user reads nothing.
 
 The index is built in the background at start-up. `/healthz` answers at once (the process is
 alive); `/readyz` answers 503 until the index is built, so Kubernetes sends no traffic to a
@@ -14,7 +14,9 @@ Configuration, all from the environment:
 
 * `CLEARANCE_CORPUS`: directory of handbook Markdown (required)
 * `CLEARANCE_ACCESS`: the access file, sections to groups and users to groups (required)
-* `CLEARANCE_USER_HEADER`: the identity header (default `x-authenticated-user`)
+* `CLEARANCE_IDENTITY`: `header` (default) or `iap`
+* `CLEARANCE_USER_HEADER`: the identity header in `header` mode (default `x-authenticated-user`)
+* `CLEARANCE_IAP_AUDIENCE`: in `iap` mode, required: `/projects/NUMBER/global/backendServices/ID`
 * `CLEARANCE_STRATEGY`: chunking strategy (default `headings_titled`)
 """
 
@@ -37,6 +39,7 @@ from starlette.routing import Route
 
 from clearance.chunking import chunk_all
 from clearance.corpus import Access, load
+from clearance.identity import HeaderIdentity, IapIdentity, Identity
 from clearance.index import Bm25Index
 
 MAX_K = 20
@@ -49,7 +52,7 @@ class State:
     corpus_dir: Path
     access_path: Path
     strategy: str = "headings_titled"
-    user_header: str = "x-authenticated-user"
+    identity: Identity = field(default_factory=HeaderIdentity)
     access: Access | None = None
     index: Bm25Index | None = None
     error: str = ""
@@ -100,13 +103,16 @@ def create_app(state: State, background: bool = True) -> Starlette:
         return JSONResponse({"status": "alive"})
 
     async def readyz(request: Request) -> JSONResponse:
-        if state.ready.is_set():
-            return JSONResponse({"status": "ready"})
-        return _error(503, state.error or "building the index")
+        if not state.ready.is_set():
+            return _error(503, state.error or "building the index")
+        if not state.identity.ready():
+            return _error(503, "identity keys not loaded")
+        return JSONResponse({"status": "ready"})
 
     async def search(request: Request) -> JSONResponse:
-        user = request.headers.get(state.user_header, "").strip()
+        user, reason = state.identity.user(request.headers)
         if not user:
+            _log(event="denied", mode=state.identity.mode, reason=reason)
             return _error(401, "no authenticated user")
         if not state.ready.is_set() or state.index is None or state.access is None:
             return _error(503, "not ready")
@@ -161,6 +167,16 @@ def from_env() -> Starlette:
             corpus_dir=Path(os.environ["CLEARANCE_CORPUS"]),
             access_path=Path(os.environ["CLEARANCE_ACCESS"]),
             strategy=os.environ.get("CLEARANCE_STRATEGY", "headings_titled"),
-            user_header=os.environ.get("CLEARANCE_USER_HEADER", "x-authenticated-user").lower(),
+            identity=identity_from_env(),
         )
     )
+
+
+def identity_from_env() -> Identity:
+    """Fail at start-up, not per request, when the identity configuration is wrong."""
+    mode = os.environ.get("CLEARANCE_IDENTITY", "header")
+    if mode == "header":
+        return HeaderIdentity(os.environ.get("CLEARANCE_USER_HEADER", "x-authenticated-user"))
+    if mode == "iap":
+        return IapIdentity(os.environ.get("CLEARANCE_IAP_AUDIENCE", ""))
+    raise ValueError(f"CLEARANCE_IDENTITY must be header or iap, not {mode!r}")

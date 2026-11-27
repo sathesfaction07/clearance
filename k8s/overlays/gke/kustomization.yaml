@@ -1,18 +1,25 @@
-# GKE: the image from Artifact Registry, three replicas spread across zones, and autoscaling.
-# Rendered and checked against a real API server in CI (a server-side dry run on kind); never
-# applied to a Google Cloud project. Replace PROJECT and the tag at deploy time.
+# GKE: the image from Artifact Registry, three replicas spread across zones, autoscaling, and
+# Identity-Aware Proxy in front. Rendered and checked against a real API server in CI (a
+# server-side dry run on kind); never applied to a Google Cloud project. Replace PROJECT, the
+# tag, the domain and the IAP audience at deploy time.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - ../../base
   - hpa.yaml
+  - iap.yaml
 images:
   - name: clearance
     newName: europe-west1-docker.pkg.dev/PROJECT/clearance/clearance
-    newTag: "0.2.0"
+    newTag: "0.3.0"
 replicas:
   - name: clearance
     count: 3
+configMapGenerator:
+  - name: clearance-access
+    behavior: replace
+    files:
+      - access.yaml
 patches:
   - target: {kind: Deployment, name: clearance}
     patch: |-
@@ -25,3 +32,47 @@ patches:
             labelSelector:
               matchLabels:
                 app: clearance
+      # Verify IAP's signed token; the plain identity header is ignored. The audience is
+      # the backend service the Ingress creates:
+      #   gcloud compute backend-services describe <name> --global --format='value(id)'
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value: {name: CLEARANCE_IDENTITY, value: iap}
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: CLEARANCE_IAP_AUDIENCE
+          value: /projects/PROJECT_NUMBER/global/backendServices/BACKEND_SERVICE_ID
+  - target: {kind: Service, name: clearance}
+    patch: |-
+      - op: add
+        path: /metadata/annotations
+        value:
+          cloud.google.com/neg: '{"ingress": true}'
+          cloud.google.com/backend-config: '{"default": "clearance"}'
+  # With container-native load balancing, requests arrive from Google's front ends and
+  # health checkers, not from a gateway pod. And the service now makes one outbound call:
+  # it fetches IAP's public keys from www.gstatic.com over HTTPS, so it needs DNS and 443.
+  - target: {kind: NetworkPolicy, name: clearance-gateway-only}
+    patch: |-
+      - op: replace
+        path: /spec/ingress
+        value:
+          - from:
+              - ipBlock: {cidr: 35.191.0.0/16}
+              - ipBlock: {cidr: 130.211.0.0/22}
+            ports:
+              - port: 8080
+      - op: replace
+        path: /spec/egress
+        value:
+          - to:
+              - namespaceSelector: {}
+                podSelector:
+                  matchLabels:
+                    k8s-app: kube-dns
+            ports:
+              - {port: 53, protocol: UDP}
+              - {port: 53, protocol: TCP}
+          - ports:
+              - {port: 443, protocol: TCP}

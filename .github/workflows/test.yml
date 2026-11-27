@@ -61,7 +61,10 @@ jobs:
           kubectl -n clearance get pods -o wide
           kubectl -n clearance logs deployment/clearance | grep '"event": "ready"'
       - name: The GKE overlay is accepted by the API server
-        run: kubectl kustomize k8s/overlays/gke | kubectl apply --dry-run=server -f -
+        run: |
+          kubectl apply -f k8s/tests/gke-crds.yaml
+          kubectl wait --for=condition=Established crd --all --timeout=60s
+          kubectl kustomize k8s/overlays/gke | kubectl apply --dry-run=server -f -
       - name: A pod without the gateway label cannot reach the service
         run: |
           kubectl apply -f k8s/tests/outsider.yaml
