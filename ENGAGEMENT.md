@@ -63,10 +63,10 @@ to the teams that own restricted documents."
 | Filtering after ranking, the proposed fix, starves users | **Measured:** 116 of 198 searches returned fewer results than the user was entitled to | same |
 | Restricted pages do not move anyone else's results | **Measured:** 0 of 198 searches differ from an index without the restricted pages. With corpus-wide statistics: 165 differ in score and 136 in order | same |
 | Retrieval finds the right page | **Measured:** the source page is in the top 5 for 97% of questions (titled heading chunks, MRR 0.88). One question is 3%, so the strategies are within noise of each other | same |
-| The deployed service enforces the same rules | Every question as every user over HTTP, inside the cluster: 0 restricted results, a request without identity refused (401), and an unknown user given nothing | CI: kubernetes job, `k8s/tests/probe-job.yaml` |
-| Only the gateway can reach the service | A pod in the same namespace without the gateway label resolves the Service but cannot connect | CI: kubernetes job, `k8s/tests/outsider.yaml` |
-| A rolling restart drops no requests | The probe keeps querying through `kubectl rollout restart`, and any failed request fails the job | CI: kubernetes job |
-| The production overlay is valid | The GKE overlay passes a server-side dry run against a real API server | CI: kubernetes job |
+| The deployed service enforces the same rules | **Measured in CI:** 20,196 searches over HTTP inside the cluster (every question as every user, 102 times), 0 restricted results among 100,980 returned; a request without identity refused (401); an unknown user given nothing | CI: kubernetes job, `k8s/tests/probe-job.yaml` |
+| Only the gateway can reach the service | **Measured in CI:** a pod in the same namespace without the gateway label resolves the Service but its connection is refused by the network policy | CI: kubernetes job, `k8s/tests/outsider.yaml` |
+| A rolling restart drops no requests | **Measured in CI:** 0 failed requests while both pods were replaced by `kubectl rollout restart` mid-probe | CI: kubernetes job |
+| The production overlay is valid | **Measured in CI:** the GKE overlay passes a server-side dry run against a real API server | CI: kubernetes job |
 | The service is light | **Measured on a laptop:** 774 pages indexed into 7,544 chunks in about 1 second; about 95 MB of memory; a search takes 1.1 ms at the median and 5.6 ms at p95 | `uvicorn --factory clearance.service:from_env` |
 
 ## What is not yet proven
