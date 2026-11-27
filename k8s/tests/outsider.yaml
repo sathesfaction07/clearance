@@ -1,0 +1,38 @@
+# A pod in the same namespace without the gateway label. It must be able to resolve the
+# Service (so DNS is not what stops it) and must not be able to connect. It exits 0 only if
+# the connection is blocked.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: outsider
+  namespace: clearance
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+    - name: outsider
+      image: clearance:dev
+      imagePullPolicy: Never
+      command:
+        - python
+        - -c
+        - |
+          import socket, sys, urllib.request
+          print("resolved clearance to", socket.gethostbyname("clearance"))
+          try:
+              urllib.request.urlopen("http://clearance:8080/healthz", timeout=5)
+          except Exception as e:
+              print("blocked:", type(e).__name__)
+              sys.exit(0)
+          print("REACHED the service without the gateway label")
+          sys.exit(1)
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop: ["ALL"]

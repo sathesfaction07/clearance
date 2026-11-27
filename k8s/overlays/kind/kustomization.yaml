@@ -1,0 +1,15 @@
+# Local cluster in CI: the image is built on the runner and loaded with `kind load`.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+images:
+  - name: clearance
+    newName: clearance
+    newTag: dev
+patches:
+  - target: {kind: Deployment, name: clearance}
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Never

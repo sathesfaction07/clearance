@@ -41,6 +41,57 @@ jobs:
       - name: Measure, and check for leaks
         run: python scripts/evaluate.py
 
+  kubernetes:
+    # The service on a real Kubernetes cluster (kind), with the real handbook baked into the
+    # image: only the gateway can reach it, every question as every user returns nothing
+    # restricted, and a rolling restart under load drops no requests.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the image (fetches the handbook)
+        run: docker build -t clearance:dev .
+      - uses: helm/kind-action@v1
+        with:
+          cluster_name: clearance
+      - name: Load the image and deploy
+        run: |
+          kind load docker-image clearance:dev --name clearance
+          kubectl apply -k k8s/overlays/kind
+          kubectl -n clearance rollout status deployment/clearance --timeout=180s
+          kubectl -n clearance get pods -o wide
+          kubectl -n clearance logs deployment/clearance | grep '"event": "ready"'
+      - name: The GKE overlay is accepted by the API server
+        run: kubectl kustomize k8s/overlays/gke | kubectl apply --dry-run=server -f -
+      - name: A pod without the gateway label cannot reach the service
+        run: |
+          kubectl apply -f k8s/tests/outsider.yaml
+          for i in $(seq 60); do
+            phase=$(kubectl -n clearance get pod outsider -o jsonpath='{.status.phase}')
+            case "$phase" in Succeeded|Failed) break ;; esac
+            sleep 2
+          done
+          kubectl -n clearance logs pod/outsider
+          test "$phase" = Succeeded
+      - name: Every question as every user, through a rolling restart
+        run: |
+          kubectl apply -f k8s/tests/probe-job.yaml
+          sleep 20
+          kubectl -n clearance rollout restart deployment/clearance
+          kubectl -n clearance rollout status deployment/clearance --timeout=180s
+          for i in $(seq 120); do
+            done_=$(kubectl -n clearance get job probe -o jsonpath='{.status.succeeded}{.status.failed}')
+            [ -n "$done_" ] && break
+            sleep 2
+          done
+          kubectl -n clearance logs job/probe
+          test "$(kubectl -n clearance get job probe -o jsonpath='{.status.succeeded}')" = 1
+      - name: Diagnostics
+        if: failure()
+        run: |
+          kubectl -n clearance get all,networkpolicy,pdb -o wide || true
+          kubectl -n clearance describe pods || true
+          kubectl -n clearance logs deployment/clearance --all-containers --tail=50 || true
+
   windows:
     runs-on: windows-latest
     steps:

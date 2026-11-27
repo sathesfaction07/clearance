@@ -6,7 +6,7 @@ import pytest
 
 from clearance.chunking import STRATEGIES, chunk_all, fixed, headings
 from clearance.corpus import Access, clean, load
-from clearance.evaluate import Question, leaks
+from clearance.evaluate import Question, influence, leaks, quality
 from clearance.index import Bm25Index
 
 FIXTURE = Path(__file__).parent / "fixture"
@@ -87,3 +87,38 @@ def test_filter_placement_leaks_and_starves(corpus, access):
     assert r["before"]["leaked_chunks"] == 0
     assert r["after"]["leaked_chunks"] == 0
     assert r["none"]["leaked_chunks"] > 0
+
+
+def test_unreadable_pages_do_not_move_what_a_user_sees(corpus, access):
+    """ "four" and "system" also appear in the legal and security pages sam cannot read."""
+    chunks = chunk_all(corpus.docs, "headings_titled")
+    sam = access.groups_of("sam")
+    full = Bm25Index(chunks)
+    own = Bm25Index([c for c in chunks if c.group in sam])
+    query = "four weeks system"
+
+    def scores(hits):
+        return [(h.chunk.id, round(h.score, 9)) for h in hits]
+
+    assert scores(full.search(query, sam)) == scores(own.search(query, sam))
+    assert scores(full.search(query, sam, scoped=False)) != scores(own.search(query, sam))
+
+
+def test_influence_is_measured_per_user(corpus, access):
+    questions = [Question("four weeks system", "hr/leave.md")]
+    r = influence(corpus, access, questions, "headings_titled")
+    assert r["scoped"] == {"asked": 3, "scores_differ": 0, "order_differs": 0}
+    assert r["global"]["scores_differ"] >= 1
+
+
+def test_quality_is_scored_for_every_strategy(corpus, access):
+    questions = [
+        Question("who can sign big customer contracts", "legal/contracts.md"),
+        Question("parental leave weeks", "hr/leave.md"),
+        Question("a page that was never indexed", "hr/missing.md"),
+    ]
+    q = quality(corpus, access, questions)
+    assert set(q) == set(STRATEGIES)
+    for v in q.values():
+        assert v["questions"] == 2  # the unindexed source is skipped, not scored as a miss
+        assert v["hit@1"] == 1.0 and v["mrr"] == 1.0 and v["missed_top5"] == []

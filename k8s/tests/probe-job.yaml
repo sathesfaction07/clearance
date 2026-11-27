@@ -1,0 +1,38 @@
+# Runs as a gateway pod: every question as every user, for 90 seconds, through the Service.
+# CI restarts the deployment while this runs; any failed request or leak fails the job.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: probe
+  namespace: clearance
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        clearance-gateway: "true"
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: probe
+          image: clearance:dev
+          imagePullPolicy: Never
+          command:
+            - python
+            - -m
+            - clearance.probe
+            - --url=http://clearance:8080
+            - --access=/etc/clearance/access.yaml
+            - --questions=/app/questions.yaml
+            - --seconds=90
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]

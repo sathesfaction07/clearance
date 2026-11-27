@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: clearance
+  labels:
+    # Kubernetes refuses any pod here that runs as root, escalates privileges or keeps
+    # Linux capabilities, the probe job included.
+    pod-security.kubernetes.io/enforce: restricted

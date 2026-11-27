@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clearance
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: clearance
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0  # a new pod must be ready before an old one goes
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: clearance
+    spec:
+      automountServiceAccountToken: false  # the service calls no Kubernetes or Google API
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: clearance
+          image: clearance
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: CLEARANCE_ACCESS
+              value: /etc/clearance/access.yaml
+          volumeMounts:
+            - name: access
+              mountPath: /etc/clearance
+              readOnly: true
+          # Alive as soon as the process answers; ready only once the index is built.
+          startupProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 2
+            failureThreshold: 30
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 10
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+            periodSeconds: 2
+            failureThreshold: 2
+          lifecycle:
+            preStop:
+              # Keep serving while the pod is removed from the Service's endpoints, so
+              # requests already routed to it during a rollout are not cut off.
+              exec:
+                command: ["sleep", "5"]
+          resources:
+            requests: {cpu: 100m, memory: 256Mi}
+            limits: {memory: 768Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: access
+          configMap:
+            name: clearance-access

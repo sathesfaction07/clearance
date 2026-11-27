@@ -1,0 +1,20 @@
+# The service trusts the identity header, so only the gateway may reach it: any other pod in
+# the cluster could otherwise claim to be anyone. It needs nothing outbound, so nothing
+# outbound is allowed: a compromised pod cannot send the handbook anywhere.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: clearance-gateway-only
+spec:
+  podSelector:
+    matchLabels:
+      app: clearance
+  policyTypes: ["Ingress", "Egress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              clearance-gateway: "true"
+      ports:
+        - port: 8080
+  egress: []

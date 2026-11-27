@@ -90,3 +90,33 @@ def leaks(
                     starved += len(allowed) > len(results)
         report[mode] = {"asked": asked, "leaked_chunks": leaked, "starved": starved}
     return report
+
+
+def _signature(hits: list) -> list[tuple[str, float]]:
+    return [(h.chunk.id, round(h.score, 9)) for h in hits]
+
+
+def influence(
+    corpus: Corpus, access: Access, questions: list[Question], strategy: str, k: int = 5
+) -> dict[str, Any]:
+    """Do pages a user cannot read change what that user sees?
+
+    For each user, the reference is an index built from only the pages they may read: what
+    they would see if restricted pages did not exist. Every question is asked against the
+    full index and compared with the reference, chunk by chunk and score by score.
+    """
+    chunks = chunk_all(corpus.docs, strategy)
+    full = Bm25Index(chunks)
+    out: dict[str, Any] = {
+        mode: {"asked": 0, "scores_differ": 0, "order_differs": 0} for mode in ("global", "scoped")
+    }
+    for groups in access.user_groups.values():
+        own = Bm25Index([c for c in chunks if c.group in groups])
+        for q in questions:
+            ref = own.search(q.q, groups, k=k)
+            for mode in out:
+                got = full.search(q.q, groups, k=k, scoped=mode == "scoped")
+                out[mode]["asked"] += 1
+                out[mode]["scores_differ"] += _signature(got) != _signature(ref)
+                out[mode]["order_differs"] += [h.chunk.id for h in got] != [h.chunk.id for h in ref]
+    return out
