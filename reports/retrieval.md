@@ -7,7 +7,7 @@ Questions: 33, each asked by the least-privileged user allowed to read its sourc
 
 | Strategy | Chunks | Source page in top 1 | Top 3 | Top 5 | Mean reciprocal rank |
 |:--|--:|--:|--:|--:|--:|
-| fixed | 6481 | 79% | 97% | 100% | 0.87 |
+| fixed | 6484 | 79% | 97% | 100% | 0.87 |
 | headings | 7544 | 67% | 91% | 97% | 0.80 |
 | headings_titled | 7544 | 79% | 97% | 97% | 0.88 |
 

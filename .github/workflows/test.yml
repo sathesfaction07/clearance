@@ -11,35 +11,58 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.11", "3.12"]
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.0-pg17
+        env:
+          POSTGRES_PASSWORD: ci-only
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 2s --health-retries 30
+    env:
+      CLEARANCE_TEST_PG_DSN: postgresql://postgres:ci-only@localhost:5432/postgres
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install
-        run: pip install -e ".[dev]"
+        run: pip install -e ".[dev,semantic,agent]"
       - name: Lint
         run: |
           ruff check src tests scripts
           ruff format --check src tests scripts
-      - name: Test
+      - name: Test (pgvector tests run against the service container)
         run: pytest -q --cov=clearance --cov-report=term-missing
 
   handbook:
-    # The real corpus: download the six handbook sections, measure retrieval, and fail the
-    # build if the shipped design returns a single restricted chunk.
+    # The real corpus: download the six handbook sections (pinned to one commit), measure
+    # keyword, semantic and hybrid retrieval, load every chunk into pgvector, and fail the
+    # build if the shipped design returns a single restricted chunk or starves a user.
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.0-pg17
+        env:
+          POSTGRES_PASSWORD: ci-only
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 2s --health-retries 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - name: Install
-        run: pip install -e ".[dev]"
+        run: pip install -e ".[dev,semantic]"
       - name: Fetch the handbook sections
         run: python scripts/fetch_handbook.py
-      - name: Measure, and check for leaks
+      - name: Keyword retrieval and permissions
         run: python scripts/evaluate.py
+      - name: Semantic and hybrid retrieval, and filtering in pgvector
+        env:
+          CLEARANCE_PG_DSN: postgresql://postgres:ci-only@localhost:5432/postgres
+        run: python scripts/evaluate_semantic.py
 
   kubernetes:
     # The service on a real Kubernetes cluster (kind), with the real handbook baked into the
@@ -57,7 +80,8 @@ jobs:
         run: |
           kind load docker-image clearance:dev --name clearance
           kubectl apply -k k8s/overlays/kind
-          kubectl -n clearance rollout status deployment/clearance --timeout=180s
+          kubectl -n clearance rollout status statefulset/clearance-db --timeout=180s
+          kubectl -n clearance rollout status deployment/clearance --timeout=240s
           kubectl -n clearance get pods -o wide
           kubectl -n clearance logs deployment/clearance | grep '"event": "ready"'
       - name: The GKE overlay is accepted by the API server
@@ -65,7 +89,7 @@ jobs:
           kubectl apply -f k8s/tests/gke-crds.yaml
           kubectl wait --for=condition=Established crd --all --timeout=60s
           kubectl kustomize k8s/overlays/gke | kubectl apply --dry-run=server -f -
-      - name: A pod without the gateway label cannot reach the service
+      - name: A pod without the gateway label reaches neither the service nor the database
         run: |
           kubectl apply -f k8s/tests/outsider.yaml
           for i in $(seq 60); do
@@ -91,7 +115,8 @@ jobs:
       - name: Diagnostics
         if: failure()
         run: |
-          kubectl -n clearance get all,networkpolicy,pdb -o wide || true
+          kubectl -n clearance get all,networkpolicy,pdb,pvc -o wide || true
+          kubectl -n clearance logs statefulset/clearance-db --tail=50 || true
           kubectl -n clearance describe pods || true
           kubectl -n clearance logs deployment/clearance --all-containers --tail=50 || true
 
@@ -103,7 +128,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install
-        run: pip install -e ".[dev]"
-      - name: Test
+        run: pip install -e ".[dev,semantic,agent]"
+      - name: Test (no database on Windows runners; the pgvector tests skip)
         shell: bash
         run: pytest -q

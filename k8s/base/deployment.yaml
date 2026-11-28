@@ -34,6 +34,18 @@ spec:
           env:
             - name: CLEARANCE_ACCESS
               value: /etc/clearance/access.yaml
+            # Semantic retrieval from pgvector (measured best; keyword is the fallback when a
+            # question cannot be embedded). The query embedder is set per overlay: fixture
+            # vectors on kind, EmbeddingGemma on GKE.
+            - name: CLEARANCE_RETRIEVAL
+              value: semantic
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef: {name: clearance-db, key: password}
+            - name: CLEARANCE_PG_DSN
+              value: postgresql://clearance:$(PGPASSWORD)@clearance-db:5432/clearance
+            - name: CLEARANCE_VECTORS
+              value: /app/data/embeddings/chunks.npz
           volumeMounts:
             - name: access
               mountPath: /etc/clearance

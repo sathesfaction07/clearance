@@ -14,9 +14,12 @@ RUN useradd --uid 10001 --no-create-home --shell /usr/sbin/nologin clearance
 WORKDIR /app
 COPY pyproject.toml ./
 COPY src ./src
-RUN pip install --no-cache-dir . && rm -rf /root/.cache
+RUN pip install --no-cache-dir ".[semantic]" && rm -rf /root/.cache
 COPY config/access.yaml /etc/clearance/access.yaml
-COPY data/questions.yaml /app/questions.yaml
+COPY data/questions.yaml data/questions-paraphrased.yaml /app/
+# The committed embeddings: chunk vectors to load into pgvector, and the probe's question
+# vectors for clusters without an embedding model (CI).
+COPY data/embeddings /app/data/embeddings
 COPY --from=corpus /build/data/raw/handbook/md /srv/handbook
 USER 10001
 EXPOSE 8080

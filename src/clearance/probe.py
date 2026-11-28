@@ -4,10 +4,11 @@ Run inside the cluster as a gateway pod (k8s/probe-job.yaml), so it reaches the 
 way real traffic does. For each search it checks that every returned page belongs to a group
 the user is in, according to the access file. It also checks that a request with no identity
 is refused and an unknown user gets nothing. With `--seconds`, it keeps asking for that long,
-which is how CI shows that a rolling restart drops no requests.
+which is how CI shows that a rolling restart drops no requests. With `--expect-retrieval
+semantic`, every answer must have come from semantic retrieval, not the keyword fallback.
 
-Exits 1 on any leak or any failed request. Standard library only, so it runs from the
-service image.
+Exits 1 on any leak, any failed request or any unexpected retrieval. Standard library only,
+so it runs from the service image.
 """
 
 from __future__ import annotations
@@ -36,10 +37,9 @@ def _get(url: str, headers: dict[str, str], timeout: float = 10) -> tuple[int, d
         return 0, {"error": str(e)}
 
 
-def probe(
-    base: str, access: Access, questions: list, header: str, seconds: float = 0
-) -> dict[str, int]:
-    out = {"searches": 0, "failed": 0, "leaked_results": 0, "results": 0, "rounds": 0}
+def probe(base: str, access: Access, questions: list, header: str, seconds: float = 0) -> dict:
+    out: dict = {"searches": 0, "failed": 0, "leaked_results": 0, "results": 0, "rounds": 0}
+    out["retrieval"] = {}
     deadline = time.monotonic() + seconds
     while True:
         for user, groups in access.user_groups.items():
@@ -50,6 +50,8 @@ def probe(
                 if status != 200:
                     out["failed"] += 1
                     continue
+                method = body.get("retrieval", "")
+                out["retrieval"][method] = out["retrieval"].get(method, 0) + 1
                 for r in body["results"]:
                     out["results"] += 1
                     section = r["path"].split("/", 1)[0]
@@ -68,14 +70,15 @@ def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--url", required=True, help="the service, e.g. http://clearance:8080")
     p.add_argument("--access", required=True, type=Path)
-    p.add_argument("--questions", required=True, type=Path)
+    p.add_argument("--questions", required=True, type=Path, nargs="+")
     p.add_argument("--header", default="x-authenticated-user")
     p.add_argument("--seconds", type=float, default=0, help="keep asking for this long")
+    p.add_argument("--expect-retrieval", default="", help="keyword, semantic or hybrid")
     args = p.parse_args(argv)
     result = probe(
         args.url.rstrip("/"),
         Access.load(args.access),
-        load_questions(args.questions),
+        [q for path in args.questions for q in load_questions(path)],
         args.header,
         args.seconds,
     )
@@ -86,6 +89,7 @@ def main(argv: list[str] | None = None) -> int:
         and result["results"] > 0
         and result["anonymous_status"] == 401
         and result["unknown_user_results"] == 0
+        and (not args.expect_retrieval or set(result["retrieval"]) == {args.expect_retrieval})
     )
     return 0 if ok else 1
 

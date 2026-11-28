@@ -1,6 +1,6 @@
 # The service trusts the identity header, so only the gateway may reach it: any other pod in
-# the cluster could otherwise claim to be anyone. It needs nothing outbound, so nothing
-# outbound is allowed: a compromised pod cannot send the handbook anywhere.
+# the cluster could otherwise claim to be anyone. Outbound, it may only look up names and
+# reach its own database: a compromised pod cannot send the handbook anywhere.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -17,4 +17,18 @@ spec:
               clearance-gateway: "true"
       ports:
         - port: 8080
-  egress: []
+  egress:
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - {port: 53, protocol: UDP}
+        - {port: 53, protocol: TCP}
+    - to:
+        - podSelector:
+            matchLabels:
+              app: clearance-db
+      ports:
+        - port: 5432

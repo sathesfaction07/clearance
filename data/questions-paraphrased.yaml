@@ -1,0 +1,78 @@
+# The same 33 information needs as questions.yaml, reworded the way someone who has never
+# seen the page would ask: everyday words instead of the page's own terms, no page titles,
+# no policy or product names unless a user would plausibly know them. Same source pages.
+# This is the harder test for keyword search, and the one semantic search is meant to win.
+# Written by the same author as questions.yaml, so still not real users' wording.
+questions:
+  # people-policies (all-staff)
+  - q: I live in Dublin. Can my manager expect me to reply to Slack late in the evening?
+    source: people-policies/ireland-ltd/right-to-disconnect-policy.md
+  - q: My partner is expecting a baby and I may also be called up for reserve duty. What time off can I take?
+    source: people-policies/leave-of-absence/_index.md
+  - q: Who do I go to in our Indian company if a colleague keeps making inappropriate comments?
+    source: people-policies/india-ltd/india-eop-policy.md
+  - q: I'm employed in Paris. What are the rules for doing my job from my flat?
+    source: people-policies/france-sas/remote-work-charter.md
+  # total-rewards (all-staff)
+  - q: Can someone help me sort out my personal money, like paying down debt or saving?
+    source: total-rewards/benefits/general-and-entity-benefits/financial-wellness.md
+  - q: When will I find out about a raise this year, and do new joiners get one?
+    source: total-rewards/compensation/compensation-review-cycle/_index.md
+  - q: Apart from my monthly pay, what else do I get paid in?
+    source: total-rewards/compensation/_index.md
+  - q: I'm a senior manager in Italy hired through an employer of record. What extra payments and severance fund do I get?
+    source: total-rewards/benefits/general-and-entity-benefits/papaya-global-benefits.md
+  - q: Working from Seoul, do I get a free medical every year and does the company pay into my retirement?
+    source: total-rewards/benefits/general-and-entity-benefits/korea-ltd-benefits.md
+  - q: What doctor and hospital cover do I have if I work in Singapore?
+    source: total-rewards/benefits/general-and-entity-benefits/singapore-pte-ltd.md
+  # finance (finance)
+  - q: What do I get out of pairing up with a more senior person in the money team to learn from them?
+    source: finance/growth-and-development/finbt-mentorship.md
+  - q: In our budgeting software, how are the different forecast copies labelled and who can edit what?
+    source: finance/financial-planning-and-analysis/adaptive-insights.md
+  - q: When we sign up a new supplier, how long do they have to wait for payment and can we inspect their books?
+    source: finance/procurement/vendor-guidelines/vendor-agreement.md
+  - q: The checks for our Chinese partner's version keep breaking. What do I do?
+    source: finance/jihu-support/jihu-validation-pipelines.md
+  - q: Which executives decide what goes into our public financial filings, and what is that group responsible for?
+    source: finance/committee-composition.md
+  # legal (legal)
+  - q: After someone leaves, how long do we hold on to their HR paperwork?
+    source: legal/record-retention-policy.md
+  - q: What are customers not allowed to do with the machine learning features?
+    source: legal/ai-functionality-terms-v2.md
+  - q: If a customer tries out an unreleased feature and tells us what they think, who owns those comments and what must stay secret?
+    source: legal/testing-agreement-v5.md
+  - q: What information do we gather about how customers use the product?
+    source: legal/privacy/customer-product-usage-information.md
+  - q: I'm buying something from a new vendor. At what point do the lawyers need to see it, and how do I get a confidentiality agreement signed?
+    source: legal/procurement-guide-collaborating-with-gitlab-legal.md
+  # security (security)
+  - q: What should I check before pulling a third-party package into our code?
+    source: security/best-practices/supply-chain-security-for-dependencies.md
+  - q: A customer running their own server is flooded with junk accounts. How can they stop it themselves?
+    source: security/security-operations/trustandsafety/diy.md
+  - q: Our scanner flagged a leaked password in the code. How do I fix it properly?
+    source: security/product-security/vulnerability-management/runbooks/fixing-vulnerabilities.md
+  - q: I want to run Linux on my work computer. Which one is allowed and what security software must be on it?
+    source: security/corporate/systems/linux/_index.md
+  - q: How do people get added to mailing lists automatically, and how quickly do changes show up?
+    source: security/corporate/systems/google/groups/automated-groups/_index.md
+  - q: A prospect sent us a long security questionnaire. Is there a library of approved answers?
+    source: security/security-assurance/field-security/knowledge_base.md
+  # support (support)
+  - q: A customer wants their two plans combined into one, or one plan broken up. How do I do that?
+    source: support/license-and-renewals/workflows/merge_or_split_subscription.md
+  - q: A customer can't get their product key to work on their own server. How do I tag the ticket?
+    source: support/license-and-renewals/workflows/self-managed/troubleshoot_license_upload_issues.md
+  - q: A customer says their instance is sluggish and they think it's the database. Where do I start?
+    source: support/workflows/investigate_db_perf_issues.md
+  - q: I'm in support and want to move into people management. Is there a path for that?
+    source: support/aspiring_leaders.md
+  - q: How do I change the canned replies and automatic rules in our ticketing tool?
+    source: support/workflows/working-on-zendesk-content.md
+  - q: How are the regular drills for the people who run incident communications set up?
+    source: support/workflows/cmoc_practice_events.md
+  - q: How does a reseller partner get help from us and send us logs?
+    source: support/partnerships/select.md

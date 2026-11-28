@@ -1,0 +1,73 @@
+# The query embedder: EmbeddingGemma (the model the chunk vectors were computed with) on
+# Ollama, inside the cluster. Only the service may call it, and it calls nothing.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clearance-embedder
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: clearance-embedder
+  template:
+    metadata:
+      labels:
+        app: clearance-embedder
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: embedder
+          image: europe-west1-docker.pkg.dev/PROJECT/clearance/embedder:0.3.0
+          ports:
+            - {name: http, containerPort: 11434}
+          env:
+            - {name: HOME, value: /tmp}
+          readinessProbe:
+            httpGet: {path: /api/version, port: http}
+            periodSeconds: 5
+          resources:
+            requests: {cpu: 500m, memory: 1Gi}
+            limits: {memory: 2Gi}
+          volumeMounts:
+            - {name: tmp, mountPath: /tmp}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - {name: tmp, emptyDir: {}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: clearance-embedder
+spec:
+  selector:
+    app: clearance-embedder
+  ports:
+    - {name: http, port: 11434, targetPort: http}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: clearance-embedder-service-only
+spec:
+  podSelector:
+    matchLabels:
+      app: clearance-embedder
+  policyTypes: ["Ingress", "Egress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: clearance
+      ports:
+        - port: 11434
+  egress: []

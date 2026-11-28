@@ -1,5 +1,6 @@
-# Runs as a gateway pod: every question as every user, for 90 seconds, through the Service.
-# CI restarts the deployment while this runs; any failed request or leak fails the job.
+# Runs as a gateway pod: every question (as written and paraphrased) as every user, for 90
+# seconds, through the Service. CI restarts the deployment while this runs; any failed
+# request, any leak, or any answer not from semantic retrieval fails the job.
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -29,7 +30,10 @@ spec:
             - clearance.probe
             - --url=http://clearance:8080
             - --access=/etc/clearance/access.yaml
-            - --questions=/app/questions.yaml
+            - --questions
+            - /app/questions.yaml
+            - /app/questions-paraphrased.yaml
+            - --expect-retrieval=semantic
             - --seconds=90
           securityContext:
             allowPrivilegeEscalation: false

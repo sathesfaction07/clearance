@@ -1,6 +1,6 @@
 # A pod in the same namespace without the gateway label. It must be able to resolve the
-# Service (so DNS is not what stops it) and must not be able to connect. It exits 0 only if
-# the connection is blocked.
+# service and the database (so DNS is not what stops it) and must be able to connect to
+# neither. It exits 0 only if both connections are blocked.
 apiVersion: v1
 kind: Pod
 metadata:
@@ -24,13 +24,22 @@ spec:
         - |
           import socket, sys, urllib.request
           print("resolved clearance to", socket.gethostbyname("clearance"))
+          print("resolved clearance-db to", socket.gethostbyname("clearance-db"))
+          reached = []
           try:
               urllib.request.urlopen("http://clearance:8080/healthz", timeout=5)
+              reached.append("the service")
           except Exception as e:
-              print("blocked:", type(e).__name__)
-              sys.exit(0)
-          print("REACHED the service without the gateway label")
-          sys.exit(1)
+              print("service blocked:", type(e).__name__)
+          try:
+              socket.create_connection(("clearance-db", 5432), timeout=5).close()
+              reached.append("the database")
+          except Exception as e:
+              print("database blocked:", type(e).__name__)
+          if reached:
+              print("REACHED", " and ".join(reached), "without being allowed to")
+              sys.exit(1)
+          sys.exit(0)
       securityContext:
         allowPrivilegeEscalation: false
         readOnlyRootFilesystem: true

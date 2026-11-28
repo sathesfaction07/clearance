@@ -1,4 +1,6 @@
-# Local cluster in CI: the image is built on the runner and loaded with `kind load`.
+# Local cluster in CI: the image is built on the runner and loaded with `kind load`. There is
+# no embedding model in CI, so questions are embedded from the committed question vectors:
+# the probe asks only those questions, and checks every answer came from semantic retrieval.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
@@ -7,9 +9,23 @@ images:
   - name: clearance
     newName: clearance
     newTag: dev
+# A throwaway password for a throwaway cluster. GKE gets its Secret from Secret Manager.
+secretGenerator:
+  - name: clearance-db
+    literals:
+      - password=kind-only-not-a-secret
+    options:
+      disableNameSuffixHash: true
 patches:
   - target: {kind: Deployment, name: clearance}
     patch: |-
       - op: add
         path: /spec/template/spec/containers/0/imagePullPolicy
         value: Never
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value: {name: CLEARANCE_QUERY_EMBEDDER, value: fixture}
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value: {name: CLEARANCE_QUERY_VECTORS, value: /app/data/embeddings/questions.npz}
+namespace: clearance

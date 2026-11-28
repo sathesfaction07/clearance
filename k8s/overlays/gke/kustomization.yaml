@@ -1,13 +1,16 @@
 # GKE: the image from Artifact Registry, three replicas spread across zones, autoscaling, and
-# Identity-Aware Proxy in front. Rendered and checked against a real API server in CI (a
-# server-side dry run on kind); never applied to a Google Cloud project. Replace PROJECT, the
-# tag, the domain and the IAP audience at deploy time.
+# Identity-Aware Proxy in front, and EmbeddingGemma in the cluster for query embeddings.
+# Rendered and checked against a real API server in CI (a server-side dry run on kind);
+# never applied to a Google Cloud project. Replace PROJECT, the tags, the domain and the IAP
+# audience at deploy time. The database password Secret (clearance-db, key `password`) is
+# created from Secret Manager at deploy time, not kept in this repository.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - ../../base
   - hpa.yaml
   - iap.yaml
+  - embedder.yaml
 images:
   - name: clearance
     newName: europe-west1-docker.pkg.dev/PROJECT/clearance/clearance
@@ -43,6 +46,12 @@ patches:
         value:
           name: CLEARANCE_IAP_AUDIENCE
           value: /projects/PROJECT_NUMBER/global/backendServices/BACKEND_SERVICE_ID
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value: {name: CLEARANCE_QUERY_EMBEDDER, value: ollama}
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value: {name: OLLAMA_HOST, value: "http://clearance-embedder:11434"}
   - target: {kind: Service, name: clearance}
     patch: |-
       - op: add
@@ -51,8 +60,8 @@ patches:
           cloud.google.com/neg: '{"ingress": true}'
           cloud.google.com/backend-config: '{"default": "clearance"}'
   # With container-native load balancing, requests arrive from Google's front ends and
-  # health checkers, not from a gateway pod. And the service now makes one outbound call:
-  # it fetches IAP's public keys from www.gstatic.com over HTTPS, so it needs DNS and 443.
+  # health checkers, not from a gateway pod. Outbound, besides DNS, its database and the
+  # embedder, the service fetches IAP's public keys from www.gstatic.com over HTTPS.
   - target: {kind: NetworkPolicy, name: clearance-gateway-only}
     patch: |-
       - op: replace
@@ -74,5 +83,18 @@ patches:
             ports:
               - {port: 53, protocol: UDP}
               - {port: 53, protocol: TCP}
+          - to:
+              - podSelector:
+                  matchLabels:
+                    app: clearance-db
+            ports:
+              - port: 5432
+          - to:
+              - podSelector:
+                  matchLabels:
+                    app: clearance-embedder
+            ports:
+              - port: 11434
           - ports:
               - {port: 443, protocol: TCP}
+namespace: clearance

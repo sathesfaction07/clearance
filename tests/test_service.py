@@ -66,7 +66,7 @@ def test_groups_cannot_be_claimed_by_the_caller(api):
 
 def test_unknown_users_read_nothing(api):
     r = api.get("/search?q=parental leave", headers={USER: "mallory"})
-    assert r.status_code == 200 and r.json() == {"results": []}
+    assert r.status_code == 200 and r.json() == {"retrieval": "keyword", "results": []}
 
 
 @pytest.mark.parametrize(

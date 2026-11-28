@@ -1,0 +1,24 @@
+# Questions the six handbook sections do not answer (the company is all-remote, so there
+# are no offices, canteens or parking). The assistant should say it could not find them.
+# Asked as the auditor, who may read every section, so a refusal is not a permissions effect.
+questions:
+  - q: What is the guest wifi password at the Amsterdam office?
+    source: ""
+  - q: What is the dress code when visiting a client on site?
+    source: ""
+  - q: Which parking garage should I use at headquarters?
+    source: ""
+  - q: What is on the canteen menu this week?
+    source: ""
+  - q: How do I reserve a desk for Thursday?
+    source: ""
+  - q: When is the next company ski trip and how do I sign up?
+    source: ""
+  - q: What is the CEO's favourite programming language?
+    source: ""
+  - q: Can I bring my dog to the office?
+    source: ""
+  - q: Where is the assembly point during a fire drill?
+    source: ""
+  - q: When is the on-site nurse's clinic open?
+    source: ""
